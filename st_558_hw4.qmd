@@ -1,0 +1,95 @@
+---
+title: "ST558 HW4: Advanced Functions, API Calls"
+author: "Chris Aguilar"
+format: html
+editor: visual
+---
+
+## Introduction
+
+This assignment covers Summer 2024's ST 558 HW4. We'll cover some conceptual questions about R, some more function writing, and some API calls.
+
+## Task 1: Conceptual Questions
+
+  1.  What is the purpose of the lapply() function? What is the equivalent purrr function? 
+  
+  > The purpose of `lapply()` is to keep us from explicitly writing for-loops that return a list of results. The `purrr` equivalent is `map`.
+  
+  2. Suppose we have a list called my_list. Each element of the list is a numeric data frame (all columns are numeric). We want use lapply() to run the code cor(numeric_matrix, method = "kendall") on each element of the list. Write code to do this below!
+  
+  > `lapply(my_list, cor, method = "kendall")`
+  
+  3. What are two advantages of using purrr functions instead of the BaseR apply family?
+  
+  > The two advantages are consistency between `purrr` functions (the function arguments are consistently named, preventing confusion, and the outputs are predictable from the function name) and the availability of additional helper functions within the map functions, allowing more compact code. For example, `~ . + 1` is equivalent to `function(x) x + 1`.
+  
+  4. What is a side effect function?
+  
+  > A side effect function is a function that doesn't transform its input into something else, but instead performs another action, like writing to disk or plotting something. So the input remains unchanged.
+  
+  5. Why can you name a variable sd in a function and not cause any issues with the sd function?
+  
+  > Any time you create a function and run it, it creates a temporary environment for the function. This temporary environment is what the function uses to look for variables by default before looking outside this environment. So a variable defined inside this temporary environment doesn't overwrite anything outside, and the temporary environment disappears once the function is done running.
+  
+## Task 2: Writing R Functions
+
+We'll now write some common machine learning evaluation metric functions.
+
+### RMSE
+
+First, Root Mean Squared Error (RMSE). This function will take a vector of responses and a vector of predictions, and will be able to handle missing values.
+
+```{r rmse}
+
+getRMSE <- function(responses, predictions, ...) {
+  
+  # squaring the difference between response and prediction
+  sq_err <- (responses - predictions)^2
+  
+  # mean squared error, and allowing for additional arguments
+  mse <- mean(sq_err, ...)
+  
+  # RMSE
+  sqrt(mse)
+}
+```
+
+Let's test our `getRMSE` function. We'll create some toy data to do this, then run our function.
+
+```{r test getRMSE}
+
+# generating data
+set.seed(10)
+n <- 100
+x <- runif(n)
+resp <- 3 + 10*x + rnorm(n)
+pred <- predict(lm(resp ~ x), data.frame(x))
+
+# testing RMSE function
+getRMSE(resp, pred)
+```
+
+Now, we'll test how our function handles `NA` values. First we'll add two `NA` values to our responses. Then we'll run our function with and without accounting for `NA` values.
+
+```{r test RMSE with NAs}
+
+# NA to elements 1 and 3
+resp[c(1, 3)] <- NA_real_
+
+# test, no account for NAs
+getRMSE(resp, pred) # returns NA
+
+# account for NAs
+getRMSE(resp, pred, na.rm = TRUE)
+```
+Our `getRMSE` function works as intended.
+
+### MAE
+
+Now let's look at another common metric, mean absolute deviation (MAE). We'll follow the same approach as above, with a few minor changes to the mathematical steps.
+
+```{r getMAE}
+
+# code here
+```
+
