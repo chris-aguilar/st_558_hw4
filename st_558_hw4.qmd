@@ -37,6 +37,7 @@ We'll now write some common machine learning evaluation metric functions.
 
 ### RMSE
 
+#### Step 1
 First, Root Mean Squared Error (RMSE). This function will take a vector of responses and a vector of predictions, and will be able to handle missing values.
 
 ```{r rmse}
@@ -53,6 +54,8 @@ getRMSE <- function(responses, predictions, ...) {
   sqrt(mse)
 }
 ```
+
+#### Step 2
 
 Let's test our `getRMSE` function. We'll create some toy data to do this, then run our function.
 
@@ -86,10 +89,158 @@ Our `getRMSE` function works as intended.
 
 ### MAE
 
+#### Step 3
+
 Now let's look at another common metric, mean absolute deviation (MAE). We'll follow the same approach as above, with a few minor changes to the mathematical steps.
 
 ```{r getMAE}
 
-# code here
+getMAE <- function(responses, predictions, ...) {
+  
+  # absolute difference between response and prediction
+  abs_err <- abs(responses - predictions)
+  
+  # RMSE
+  mean(abs_err, ...)
+}
+
+```
+
+#### Step 4
+
+As before, we'll create some toy data, test `getMAE`, replace two values in our responses with `NA_real_`, then check that our function can handle missing values with the `na.rm` argument passed to `mean` under the hood.
+
+First, generate data and check that `getMAE()` works.
+
+```{r test getMAE}
+
+# toy data
+set.seed(10)
+n <- 100
+x <- runif(n)
+resp <- 3 + 10*x + rnorm(n)
+pred <- predict(lm(resp ~ x), data.frame(x))
+
+# testing getMAE
+getMAE(resp, pred)
+```
+
+Now we introduce missing values and show that `getMAE` can handle them.
+
+```{r test getMAE with NAs}
+
+# NA to elements 1 and 3
+resp[c(1, 3)] <- NA_real_
+
+# test getMAE, no account for NAs
+getMAE(resp, pred)
+
+# account for NAs
+getMAE(resp, pred, na.rm = TRUE)
+
+```
+### Wrapper function
+
+#### Step 5
+
+We write a wrapper function using our MAE and RMSE helper functions above. We want it to return either or both metrics, with the outputs given appropriate names.
+
+We should check our inputs are two numeric vectors, and by default, our function should return both MAE and RMSE.
+
+```{r metrics wrapper fn}
+
+getMetrics <- function(resp, pred, metric = "both", ...) {
+  
+  # input checks: first checking atomic, then vector, and finally, numeric
+  if(!(is.vector(resp) & is.vector(pred))) stop("resp and pred should both be vectors")
+  if(!(is.atomic(resp) & is.atomic(pred))) stop("resp and pred should both be atomic vectors")
+  if(!(is.numeric(resp) & is.numeric(pred))) stop("resp and pred should both be numeric")
+  
+  
+  # one more check to make sure our metric string is correct
+  if(!(metric %in% c("both", "RMSE", "MAE"))) stop ("metric should be one of 'both', 'RMSE', 'MAE'")
+  
+  # checking for metric and giving results appropriately
+  if(metric == "both") {
+    
+    res <- c(getRMSE(resp, pred, ...), getMAE(resp, pred, ...))
+    names(res) <- c("RMSE", "MAE")
+    
+  } else if(metric == "RMSE") {
+    
+    res <- getRMSE(resp, pred, ...)
+    names(res) <- "RMSE"
+    
+  } else {
+    res <- getMAE(resp, pred, ...)
+    names(res) <- "MAE"
+  }
+  
+  # returning result
+  res
+}
+
+```
+
+#### Step 6
+
+We now test our `getMetrics` function.
+
+First, toy data, then we call it for each metric individually, then both.
+
+```{r getMetrics toy data}
+
+set.seed(10)
+n <- 100
+x <- runif(n)
+resp <- 3 + 10*x + rnorm(n)
+pred <- predict(lm(resp ~ x), data.frame(x))
+
+# RMSE
+getMetrics(resp, pred, metric = "RMSE")
+# MAE
+getMetrics(resp, pred, metric = "MAE")
+# both
+getMetrics(resp, pred, metric = "both")
+
+```
+Our function works so far.
+
+Now, let's put in two NA values and ensure we can handle them in our function.
+
+```{r getMetrics NA check}
+
+# NA to elements 1 and 3
+resp[c(1, 3)] <- NA_real_
+
+# No NA accounting for
+getMetrics(resp, pred)
+
+# Account for NA
+getMetrics(resp, pred, na.rm = TRUE)
+```
+Lastly, let's check that our function can check input types correctly. Also, because I'm a little OCD, I also include a check to ensure the `metric` argument is one of **"both", "RMSE", "MAE"**.
+
+```{r getMetrics input checks}
+# non-numeric input
+try(getMetrics(resp, "a"))
+# non-atomic input
+try(getMetrics(resp, list(pred)))
+# non-vector input
+try(getMetrics(resp, iris))
+# incorrect metric specification
+try(getMetrics(resp, pred, metric = "foo"))
+```
+
+## Task 3: API Querying and Tidy-Style Function
+
+Now we'll connect to the [News API.](https://newsapi.org) We'll need to register for an API key first before we can access news content programmatically.
+
+```{r manual API search}
+
+library(httr)
+
+api_key <- 'e73342687d7645ad9501d4b32acc40e6'
+
 ```
 
