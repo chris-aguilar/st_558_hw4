@@ -244,18 +244,21 @@ We connect manually below. My wife is a big fan of Kendrick Lamar, so to impress
 
 Rather than trying to manually create the url for the search, I feed different parts of the url reverse-engineered from looking at the examples on the News API's home page at the link above. I looked at the documentation's examples for `GET()` to figure out how to do the actions below.
 
+**NOTE**: Hard-coding API keys or authentication info, also known as **secrets**, into our scripts is a thorough no-no. There are many strategies to use secrets, but the one I'm opting for is to put the API key in another file, source it, and **ensure that file doesn't get pushed to remote, that is, make sure it isn't staged and committed before pushing.**
+
 ```{r manual API search}
 
 library(httr)
 
-# probably not a best practice to hardcode API keys/authentication
-api_key <- 'e73342687d7645ad9501d4b32acc40e6'
+# probably not a best practice to hardcode API keys/authentication, so we stick the API key in another file and source it.
+
+api_key <- source("news_api_key.R")
 
 news_api_return <- GET(url = "https://newsapi.org/", 
                          path = "v2/everything", 
                          query = list(
                            q = "kendrick lamar not like us", 
-                           apiKey = api_key,
+                           apiKey = api_key$value,
                            from = '2024-06-19', 
                            sortBy = 'relevancy',
                            language = 'en')
@@ -267,6 +270,7 @@ news_api_return <- GET(url = "https://newsapi.org/",
 Now we parse the result of the API call for the data we care about.
 
 ```{r parsed api call}
+library(jsonlite)
 parsed_result <- fromJSON(rawToChar(news_api_return$content))
 str(parsed_result$articles)
 ```
@@ -287,7 +291,7 @@ library(httr)
 library(jsonlite)
 library(tibble)
 
-api_key <- 'e73342687d7645ad9501d4b32acc40e6'
+api_key <- api_key <- source("news_api_key.R")$value
 
 getNews <- function(topic, api_key, start = NULL, ...) {
   
