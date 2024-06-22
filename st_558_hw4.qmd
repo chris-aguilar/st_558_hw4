@@ -236,11 +236,79 @@ try(getMetrics(resp, pred, metric = "foo"))
 
 Now we'll connect to the [News API.](https://newsapi.org) We'll need to register for an API key first before we can access news content programmatically.
 
+We're first going to connect manually and ensure we can pull results. Then we'll create a function to do so.
+
+### Step 1: Manual News API Call
+
+We connect manually below. My wife is a big fan of Kendrick Lamar, so to impress her, I'm going to look up some results around him.
+
+Rather than trying to manually create the url for the search, I feed different parts of the url reverse-engineered from looking at the examples on the News API's home page at the link above. I looked at the documentation's examples for `GET()` to figure out how to do the actions below.
+
 ```{r manual API search}
 
 library(httr)
 
+# probably not a best practice to hardcode API keys/authentication
 api_key <- 'e73342687d7645ad9501d4b32acc40e6'
+
+news_api_return <- GET(url = "https://newsapi.org/", 
+                         path = "v2/everything", 
+                         query = list(
+                           q = "kendrick lamar not like us", 
+                           apiKey = api_key,
+                           from = '2024-06-19', 
+                           sortBy = 'relevancy',
+                           language = 'en')
+  )
+```
+
+### Step 2: Parsing API Call Result
+
+Now we parse the result of the API call for the data we care about.
+
+```{r parsed api call}
+parsed_result <- fromJSON(rawToChar(news_api_return$content))
+str(parsed_result$articles)
+```
+
+We can see the manual API call works. Now let's make a function so we can do this process repeatedly.
+
+### Step 3: News API Call function
+
+For the function, we require a topic to search on, an API key, and a starting date range for our search. But for more advanced users, we also provide the option to add more query elements to really specify what they're looking for.
+
+[See here for additional parameters to pass to the query.](https://newsapi.org/docs/endpoints/everything)
+
+We'll call the function a few times to verify it does what we expect.
+
+```{r news api function}
+
+library(httr)
+library(jsonlite)
+library(tibble)
+
+api_key <- 'e73342687d7645ad9501d4b32acc40e6'
+
+getNews <- function(topic, api_key, start = NULL, ...) {
+  
+  # if no start date given, date range starts from yesterday
+  if(is.null(start)) start <- Sys.Date() - 1
+  
+  query <- list(q = topic, apiKey = api_key, from = start, sortBy = "popularity", ...)
+  
+  news_api_return <- GET(url = "https://newsapi.org/", 
+                         path = "v2/everything", 
+                         query = query
+  )
+  
+  parsed_result <- fromJSON(rawToChar(news_api_return$content))
+  
+  parsed_result$articles |> tibble::as_tibble()
+}
+
+getNews(topic = "kendrick lamar euphoria", api_key = api_key, start = '2024-06-01', language = 'en')
+getNews(topic = "san francisco 49ers", api_key = api_key, start = '2024-06-01')
 
 ```
 
+Our News API function call works!
